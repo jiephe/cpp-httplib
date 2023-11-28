@@ -35,3 +35,5 @@ ipch
 *.dSYM
 .*
 !/.travis.yml
+a.out
+build
