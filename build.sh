@@ -1,3 +1,3 @@
 #!/bin/bash
 
-g++ -g main.cpp -lpthread
+g++ -g main.cpp -lpthread -ljsoncpp
