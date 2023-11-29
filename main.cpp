@@ -18,33 +18,38 @@ int main(void)
 
     Server svr;
 
-    svr.Get("/h1", [](const Request& req, Response& res) {
+    svr.Post("/h1", [](const Request& req, Response& res) {
+
+        std::cout << "http body: " << req.body << std::endl;
+
         Json::Value root;
-        root["status"] = "OK";
-        root["code"] = 200;
-        Json::Value data;
-        data["message"] = "Hello, World!";
-        root["data"] = data;
-        root["req_str"] = req.get_header_value("str1");
-        root["req_int"] = Json::Value::UInt64(req.get_header_value_u64("int1"));
-
-        Json::StreamWriterBuilder builder;
-        std::string jsonString = Json::writeString(builder, root);
-        std::cout << "h1 tid: " << getCurrentThreadId() << " jsonstring: " << jsonString << std::endl;
-        res.set_content(jsonString, "text/plain");
+        Json::Reader reader;
+        if (reader.parse(req.body, root)) {
+            Json::Value respRoot;
+            respRoot["status"] = "OK";
+            respRoot["code"] = 200;
+            Json::Value data;
+            data["message"] = "Hello, World!";
+            respRoot["data"] = data;
+            respRoot["req_header_str"] = req.get_header_value("req_str");
+            respRoot["req_header_int64"] = Json::Value::UInt64(req.get_header_value_u64("req_int64"));
+            respRoot["req_body_modelId"] = root["modelId"];
+            respRoot["req_body_prompts_value"] = root["prompts"][0]["value"];
+            Json::StreamWriterBuilder builder;
+            std::string jsonString = Json::writeString(builder, respRoot);
+            std::cout << "h1 tid: " << getCurrentThreadId() << " jsonstring: " << jsonString << std::endl;
+            res.set_content(jsonString, "text/json");
+        } else {
+            Json::Value respRoot;
+            respRoot["status"] = "FAIL";
+            respRoot["code"] = 502;
+            Json::StreamWriterBuilder builder;
+            std::string jsonString = Json::writeString(builder, respRoot);
+            res.set_content(jsonString, "text/json");
+        }
     });
 
-    svr.Get("/h2", [](const Request& req, Response& res) {
-        std::cout << "h2 tid: " << getCurrentThreadId() << std::endl;
-        res.set_content("Hello World2! " + std::to_string(getCurrentThreadId()), "text/plain");
-    });
-
-    svr.Get("/h3", [](const Request& req, Response& res) {
-        std::cout << "h3 tid: " << getCurrentThreadId() << std::endl;
-        res.set_content("Hello World! " + std::to_string(getCurrentThreadId()), "text/plain");
-    });
-
-    svr.Get("/stop", [&](const Request& req, Response& res) {
+    svr.Post("/stop", [&](const Request& req, Response& res) {
         svr.stop();
     });
 
